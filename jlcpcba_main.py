@@ -99,15 +99,15 @@ def create_pcba():
     #
 
     # Open both layer files...
-    topfile = os.path.join(path, name) + "_top_pos.csv"
+    topfile = os.path.join(path, name) + "_JLCPCB_top_pos.csv"
     topfh = open(topfile, "w")
     topfh.write("Designator,Val,Package,Mid X,Mid Y,Rotation,Layer\n")
 
-    botfile = os.path.join(path, name) + "_bottom_pos.csv"
+    botfile = os.path.join(path, name) + "_JLCPCB_bottom_pos.csv"
     botfh = open(botfile, "w")
     botfh.write("Designator,Val,Package,Mid X,Mid Y,Rotation,Layer\n")
 
-    for m in board.GetModules():
+    for m in board.GetFootprints():
         # uid = m.GetPath().replace('/', '')
         # Need to just pull out the non-zero part at the end
         if hasattr(m.GetPath(), 'AsString'):
@@ -121,13 +121,14 @@ def create_pcba():
         while (uid[0] in "0/-"):
             uid = uid[1:]
 
-        smd = ((m.GetAttributes() & pcbnew.MOD_CMS) == pcbnew.MOD_CMS)
+        #smd = ((m.GetAttributes() & pcbnew.MOD_CMS) == pcbnew.MOD_CMS)
+        smd = m.GetAttributes()
         x = m.GetPosition().x/1000000.0
         y = m.GetPosition().y/1000000.0
         rot = m.GetOrientation()/10.0
         layer = m.GetLayerName()
         print("Got module = " + uid + " smd=" + str(smd) + " x=" + str(x) + " y=" + str(y) + " rot=" + str(rot) + "layer="+str(layer))
-        print(m.GetPath() + " attr=" + str(m.GetAttributes()))
+        print(str(m.GetPath()) + " attr=" + str(m.GetAttributes()))
 
         if (not uid in refdb):
             print("WARNING: item " + uid + " missing from schematic")
