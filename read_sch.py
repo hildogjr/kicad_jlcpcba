@@ -152,11 +152,11 @@ def read_kicad_sch(schfile):
                     for field in part:
                         if field[0] == 'property' and field[1] == 'Reference':
                             reference = field[2]
-                        elif field[0] == 'Value' and field[1] == 'Reference':
+                        elif field[0] == 'property' and field[1] == 'Value':
                             value = field[2]
-                        elif field[0] == 'Value' and (field[1].lower() == 'lcsc#' or field[1].lower() == 'lcsc'):
+                        elif field[0] == 'property' and (field[1].lower() == 'lcsc#' or field[1].lower() == 'lcsc'):
                             lcsc_code = field[2]
-                    BOM[key].add(value + '//' + footprint + '//' + lcsc_code)
+                BOM[key].add(value + '//' + footprint + '//' + lcsc_code)
                 elif part == 'sheet':
                     # Go inside hierarchical pages.
                     for part in schematic_text:
@@ -180,4 +180,3 @@ def output(outfile=False):
 
     if (outfile):
         fh.close()
-
