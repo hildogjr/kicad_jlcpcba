@@ -90,9 +90,8 @@ def create_pcba():
     # Create the BOM and build the refdb...
     #
     bom.init()
-    #bom.read_sch(os.path.join(path, name) + ".sch")
-    bom.read_kicad_sch(os.path.join(path, name) + ".kicad_sch")
-    bom.output(os.path.join(path, name) + "_JLCPCB_bom.csv")
+    bom.read_sch(os.path.join(path, name) + ".sch")
+    bom.output(os.path.join(path, name) + "_bom.csv")
     refdb = bom.REFDB
     
     #

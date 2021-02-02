@@ -25,7 +25,7 @@ This will generate three files in the project directory:
 | --- | --- |
 | projectname_bom.csv | the BOM file |
 | projectname_top_pos.csv | the placement file for the top of the board |
-| lprojectname_bottom_pos.csv | the placement file for the bottom of the board |
+| projectname_bottom_pos.csv | the placement file for the bottom of the board |
 
 These files can be uploaded to the JLCPCB PCBA page when requested (you will need to choose either top or bottom), if the rotations are not correct then you can edit rotations.cf and recreate/reupload the files.
 
