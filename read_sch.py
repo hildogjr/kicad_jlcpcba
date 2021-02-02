@@ -150,11 +150,11 @@ def read_kicad_sch(schfile):
             for part in schematic_text:
                 if isinstance(part, list):
                     if part[0] == 'symbol':
+                        reference = None
+                        value = None
+                        lcsc_code = None
+                        footprint = None
                         for field in part[1:]:
-                            reference = None
-                            value = None
-                            lcsc_code = None
-                            footprint = None
                             if field[0] == 'property' and field[1] == 'Reference':
                                 reference = field[2]
                             elif field[0] == 'property' and field[1] == 'Value':
