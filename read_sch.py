@@ -156,7 +156,7 @@ def read_kicad_sch(schfile):
                             value = field[2]
                         elif field[0] == 'property' and (field[1].lower() == 'lcsc#' or field[1].lower() == 'lcsc'):
                             lcsc_code = field[2]
-                BOM[key].add(value + '//' + footprint + '//' + lcsc_code)
+                    BOM[key].add(value + '//' + footprint + '//' + lcsc_code)
                 elif part == 'sheet':
                     # Go inside hierarchical pages.
                     for part in schematic_text:
