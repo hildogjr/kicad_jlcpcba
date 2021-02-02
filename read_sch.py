@@ -165,6 +165,8 @@ def read_kicad_sch(schfile):
                                 footprint = field[2]
                         if reference and value and lcsc_code and footprint:
                             key = value + '//' + footprint + '//' + lcsc_code
+                            if (not key in BOM):
+                                BOM[key] = set()
                             BOM[key].add(reference)
                     elif part[0] == 'sheet':
                         # Go inside hierarchical pages.
