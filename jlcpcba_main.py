@@ -90,8 +90,8 @@ def create_pcba():
     # Create the BOM and build the refdb...
     #
     bom.init()
-    bom.read_sch(path + "/" + name + ".sch")
-    bom.output(path + "/" + name + "_bom.csv")
+    bom.read_sch(os.path.join(path, name) + ".sch")
+    bom.output(os.path.join(path, name) + "_bom.csv")
     refdb = bom.REFDB
     
     #
@@ -99,11 +99,11 @@ def create_pcba():
     #
 
     # Open both layer files...
-    topfile=path + "/" + name + "_top_pos.csv"
+    topfile = os.path.join(path, name) + "_top_pos.csv"
     topfh = open(topfile, "w")
     topfh.write("Designator,Val,Package,Mid X,Mid Y,Rotation,Layer\n")
 
-    botfile=path + "/" + name + "_bottom_pos.csv"
+    botfile = os.path.join(path, name) + "_bottom_pos.csv"
     botfh = open(botfile, "w")
     botfh.write("Designator,Val,Package,Mid X,Mid Y,Rotation,Layer\n")
 
