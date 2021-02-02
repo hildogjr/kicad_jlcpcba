@@ -148,20 +148,29 @@ def read_kicad_sch(schfile):
         with open(schfile, "r") as fh:
             schematic_text = parse_sexpression(fh.read())
             for part in schematic_text:
-                if part[0] == 'symbol':
-                    for field in part[1:]:
-                        if field[0] == 'property' and field[1] == 'Reference':
-                            reference = field[2]
-                        elif field[0] == 'property' and field[1] == 'Value':
-                            value = field[2]
-                        elif field[0] == 'property' and (field[1].lower() == 'lcsc#' or field[1].lower() == 'lcsc'):
-                            lcsc_code = field[2]
-                    BOM[key].add(value + '//' + footprint + '//' + lcsc_code)
-                elif part[0] == 'sheet':
-                    # Go inside hierarchical pages.
-                    for part in part[1:]:
-                        if field[0] == 'property' and field[1] == 'Sheet file':
-                            add_parts_to_bom(field[2])
+                if isinstance(part, list):
+                    if part[0] == 'symbol':
+                        for field in part[1:]:
+                            reference = None
+                            value = None
+                            lcsc_code = None
+                            footprint = None
+                            if field[0] == 'property' and field[1] == 'Reference':
+                                reference = field[2]
+                            elif field[0] == 'property' and field[1] == 'Value':
+                                value = field[2]
+                            elif field[0] == 'property' and (field[1].lower() == 'lcsc#' or field[1].lower() == 'lcsc'):
+                                lcsc_code = field[2]
+                            elif field[0] == 'property' and field[1] == 'Footprint':
+                                footprint = field[2]
+                        if reference and value and lcsc_code and footprint:
+                            key = value + '//' + footprint + '//' + lcsc_code
+                            BOM[key].add(reference)
+                    elif part[0] == 'sheet':
+                        # Go inside hierarchical pages.
+                        for part in part[1:]:
+                            if field[0] == 'property' and field[1] == 'Sheet file':
+                                add_parts_to_bom(field[2])
     add_parts_to_bom(schfile)
 
 
