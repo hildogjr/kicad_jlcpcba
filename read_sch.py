@@ -148,7 +148,7 @@ def read_kicad_sch(schfile):
         with open(schfile, "r") as fh:
             schematic_text = parse_sexpression(fh.read())
             for part in schematic_text:
-        	if part[0] == 'symbol':
+                if part[0] == 'symbol':
                     for field in part[1:]:
                         if field[0] == 'property' and field[1] == 'Reference':
                             reference = field[2]
