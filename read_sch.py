@@ -4,6 +4,8 @@ import sys
 import os
 import re
 
+from .sexpressions import parse_sexpression
+
 BOM = {}
 REFDB = {}
 
@@ -139,6 +141,28 @@ def read_sch(schfile, spath=""):
 
             # Update the BOM with the reference we've found... (uniq)
             BOM[key].add(item['reference'])
+
+
+def read_kicad_sch(schfile):
+    def add_parts_to_bom(schfile):
+        with open(schfile, "r") as fh:
+            schematic_text = parse_sexpression(fh.read())
+            for part in schematic_text:
+        	if part == 'symbol':
+                    for field in part:
+                        if field[0] == 'property' and field[1] == 'Reference':
+                            reference = field[2]
+                        elif field[0] == 'Value' and field[1] == 'Reference':
+                            value = field[2]
+                        elif field[0] == 'Value' and (field[1].lower() == 'lcsc#' or field[1].lower() == 'lcsc'):
+                            lcsc_code = field[2]
+                    BOM[key].add(value + '//' + footprint + '//' + lcsc_code)
+                elif part == 'sheet':
+                    # Go inside hierarchical pages.
+                    for part in schematic_text:
+                        if field[0] == 'property' and field[1] == 'Sheet file':
+                            add_parts_to_bom(schfile)
+    add_parts_to_bom(schfile)
 
 
 def output(outfile=False):
