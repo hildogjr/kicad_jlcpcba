@@ -149,24 +149,31 @@ def read_kicad_sch(schfile):
         for part in schematic_text:
             if isinstance(part, list):
                 if part[0] == 'symbol':
-                    reference = None
-                    value = None
-                    lcsc_code = None
-                    footprint = None
+                    item = {}
+                    item['reference'] = None
+                    item['value'] = None
+                    item['lcsc_code'] = None
+                    item['footprint'] = None
+                    uid = None
                     for field in part[1:]:
                         if field[0] == 'property' and field[1] == 'Reference':
-                            reference = field[2]
+                            item['reference'] = field[2]
                         elif field[0] == 'property' and field[1] == 'Value':
-                            value = field[2]
+                            item['value'] = field[2]
                         elif field[0] == 'property' and (field[1].lower() == 'lcsc#' or field[1].lower() == 'lcsc'):
-                            lcsc_code = field[2]
+                            item['lcsc_code'] = field[2]
                         elif field[0] == 'property' and field[1] == 'Footprint':
-                            footprint = field[2]
-                    if reference and value and lcsc_code and footprint:
-                        key = value + '//' + footprint + '//' + lcsc_code
+                            item['footprint'] = field[2]
+                        elif field[0] == 'uuid':
+                            uid = field[1]
+                    if item['reference'] and item['value'] and item['lcsc_code'] and item['footprint'] and uid:
+                        # Create a list of references for assembly.
+                        REFDB[uid.lower()] = item
+                        # Add the part to the bill of materials.
+                        key = item['value'] + '//' + item['footprint'] + '//' + item['lcsc_code']
                         if (not key in BOM):
                             BOM[key] = set()
-                        BOM[key].add(reference)
+                        BOM[key].add(item['reference'])
                 elif part[0] == 'sheet':
                     # Go inside hierarchical pages.
                     for field in part[1:]:
