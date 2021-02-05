@@ -188,7 +188,7 @@ def output(outfile=False):
     else:
         fh = sys.stdout
     
-    fh.write("Comment,Designator,Footprint,LCSC\n")
+    fh.write("Comment,Designator,Footprint,LCSC Part #（optional)\n")
 
     for k in BOM.keys():
         (value, footprint, lcsc) = re.split("//", k)
