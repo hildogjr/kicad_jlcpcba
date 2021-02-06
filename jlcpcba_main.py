@@ -1,162 +1,143 @@
-#
 # Create a JLCPCB PCBA set of files to support PCBA, this requires us to
 # produce a BOM file and a CPL (component placement file), which will be a
 # .pos file.
-#
 # We do this by reading the associated schematic (mainly for part numbers)
 # and then cross-matching the pcb modules.
-#
 
-import os
 import pcbnew
+import os
 import re
 
-from . import read_sch as bom
 
-#
-# Setup a few useful globals...
-#
-global path
-global name
-global rotdb
-
-#
-# Read the rotations.cf config file so we know what rotations to apply
-# later.
-#
-def read_rotdb(filename):
+def read_rotation_db(filename):
+    '''Read the rotations.cf config file so we know what rotations
+    to apply later.
+    '''
     db = []
-
-    fh = open(filename, "r")
+    fh = open(filename, 'r')
     for line in fh:
         line = line.rstrip()
-
         line = re.sub('#.*$', '', line)         # remove anything after a comment
         line = re.sub('\s*$', '', line)         # remove all trailing space
-
         if (line == ""):
             continue
-
         m = re.match('^([^\s]+)\s+(\d+)$', line)
         if m:
             db.append((m.group(1), int(m.group(2))))
-
-        print(line)
     return db
 
 
-
-
-#
-# Given the footprint name, work out what rotation is needed, we support
-# matching against the long or short footprint names (if there is a colon
-# in the regex)
-#
 def possible_rotate(footprint):
-    fpshort = footprint.split(':')[1]
-
-    for rot in rotdb:
+    '''Given the footprint name, work out what rotation is needed, we
+    support matching against the long or short footprint names (if there
+    is a colon in the regex).
+    '''
+    fpshort = footprint.split(':')[-1]
+    for rot in rotation_db:
         ex = rot[0]
         delta = rot[1]
-
         fp = fpshort
         if (re.search(':', ex)):
             fp = footprint
-
         if(re.search(ex, fp)):
             return delta
-
     return 0
 
-#
-# Actually create the PCBA files...
-#
+
 def create_pcba():
-    global path
-    global name
-    global rotdb
+    '''Main function to creates the files.
+    '''
+    global rotation_db
 
     board = pcbnew.GetBoard()
     boardfile = board.GetFileName()
-    path = os.path.dirname(boardfile)
-    name = os.path.splitext(os.path.basename(boardfile))[0]
+    project_path = os.path.dirname(boardfile)
+    projet_name = os.path.splitext(os.path.basename(boardfile))[0]
 
-    #
-    # Populate the rotation db (do it here so editing and retrying is easy)
-    #
-    rotdb = read_rotdb(os.path.join(os.path.dirname(__file__), 'rotations.cf'))
-
-    #
-    # Create the BOM and build the refdb...
-    #
-    bom.init()
-    #bom.read_sch(os.path.join(path, name) + ".sch")
-    bom.read_kicad_sch(os.path.join(path, name) + ".kicad_sch")
-    bom.output(os.path.join(path, name) + "_JLCPCB_bom.csv")
-    refdb = bom.REFDB
+    # Populate the rotation db (do it here so editing and retrying is easy).
+    rotation_db = read_rotation_db(os.path.join(os.path.dirname(__file__), 'rotations.cf'))
     
-    #
-    # Now we can process all of the SMT elements...
-    #
-
     # Open both layer files...
-    topfile = os.path.join(path, name) + "_JLCPCB_top_pos.csv"
-    topfh = open(topfile, "w")
-    topfh.write("Designator,Val,Package,Mid X,Mid Y,Rotation,Layer\n")
+    top_file = os.path.join(project_path, projet_name) + '_JLCPCB_top_Pos.csv'
+    top_fh = open(top_file, 'w')
+    top_fh.write('Designator,Val,Package,Mid X,Mid Y,Rotation,Layer\n')
 
-    botfile = os.path.join(path, name) + "_JLCPCB_bottom_pos.csv"
-    botfh = open(botfile, "w")
-    botfh.write("Designator,Val,Package,Mid X,Mid Y,Rotation,Layer\n")
+    bottom_file = os.path.join(project_path, projet_name) + '_JLCPCB_bottom_Pos.csv'
+    bottom_fh = open(bottom_file, 'w')
+    bottom_fh.write('Designator,Val,Package,Mid X,Mid Y,Rotation,Layer\n')
 
-    for m in board.GetFootprints():
-        # uid = m.GetPath().replace('/', '')
-        # Need to just pull out the non-zero part at the end
-        if hasattr(m.GetPath(), 'AsString'):
-            uid = m.GetPath().AsString().lower()
-        else:
-            uid = m.GetPath().lower()
-
-        if len(uid) == 0:
+    bom_list = {}
+    for f in board.GetFootprints():
+        
+        # Check if it is a SMD component, PHT components are node assembled
+        # by JCLPCB on the default production line.
+        if not(f.GetAttributes() & pcbnew.FP_SMD) or (f.GetAttributes() & \
+                (pcbnew.FP_BOARD_ONLY + pcbnew.FP_EXCLUDE_FROM_POS_FILES + pcbnew.FP_BOARD_ONLY)):
             continue
 
-        while (uid[0] in "0/-"):
-            uid = uid[1:]
+        # Add item to the BOM creating a `set()`.
+        reference = f.GetReference()
+        value = f.GetValue()
+        # Check the typed name for the LCSC stock code filed name.
+        lcsc_field_name = 'lcsc'
+        for field_name in f.GetProperties().keys():
+            if field_name.lower() == 'lcsc' or field_name.lower() == 'lcsc#':
+                lcsc_field_name = field_name
+                break
+        lcsc_code = f.GetProperty(lcsc_field_name)
 
-        #smd = ((m.GetAttributes() & pcbnew.MOD_CMS) == pcbnew.MOD_CMS)
-        smd = m.GetAttributes()
-        x = m.GetPosition().x/1000000.0
-        y = m.GetPosition().y/1000000.0
-        rot = m.GetOrientation()/10.0
-        layer = m.GetLayerName()
-        print("Got module = " + uid + " smd=" + str(smd) + " x=" + str(x) + " y=" + str(y) + " rot=" + str(rot) + "layer="+str(layer))
-        print(str(m.GetPath()) + " attr=" + str(m.GetAttributes()))
-
-        if (not uid in refdb):
-            print("WARNING: item " + uid + " missing from schematic")
+        if not(re.search('\d$', reference) and re.search('\d', value)) and lcsc_field_name:
+            # The reference must have a numeric ending, usually Pcbnew
+            # use G*** or this kind of termination for footprints that
+            # does not represent parts.
+            # Also the value have to have number, usually the designer
+            # assign "not populate" / "n/a" (not applicable) ... to parts
+            # on layout that may be assembled later.
+            # To have some expection, in case of LCSC stock code present,
+            # this part will be considered.
             continue
 
-        item = refdb[uid]
-        reference = item['reference']
-        value = item['value']
-        footprint = item['footprint']
+        try:
+            footprint = str(f.GetFPID().GetLibItemName())
+        except:
+            footprint = None
+        if not lcsc_code:
+            lcsc_code = str(None)  # It will be selected after at JLCPCB interface.
+        if reference and value and footprint:
+            #footprint = footprint.split(':')[-1] # Simplify the footprint name.
+            key = value + '//' + footprint + '//' + lcsc_code
+            if (not key in bom_list):
+                bom_list[key] = set()
+            bom_list[key].add(reference)
 
-        # Now do the rotation needed...
-        rot = (rot + possible_rotate(footprint)) % 360
+        # Get the position of the component. Internally, Pcbnew uses
+        # micrometer position unit and a tenth of degrees on rotation.
+        x = - f.GetX() / 1000000.0
+        y = - f.GetY() / 1000000.0
+        rotation = f.GetOrientationDegrees()  # Alredy give the converted value.
+        rotation = (rotation + possible_rotate(footprint)) % 360
 
-        # Now write to the top and bottom file respectively
-        fpshort = footprint.split(':')[1]
-        fh = topfh
-        lname = "top"
-        y = y * -1                  # Pcbnew canvas used a opposite Y notation.
-        if (smd):
-            if (layer == "B.Cu"):   
-                fh = botfh
-                lname = "bottom"
+        # Write the component to the correspondent position file.
+        # Use `f.GetLayer()` instead `f.GetLayerName()` because v6
+        # will allow layer rename.
+        fh = (bottom_fh if f.GetLayer() & pcbnew.SIDE_TOP else top_fh)
+        layer_name = ('bottom' if f.GetLayer() & pcbnew.SIDE_TOP else 'top')
+        fh.write('"' + reference + '","' + value + '","' + footprint + '",' +
+                 str(x) + ',' + str(y) + ',' + str(rotation) + ',' + layer_name + '\n')
 
-            fh.write('"' + reference + '","' + value + '","' + fpshort + '",' +
-                    str(x) + ',' + str(y) + ',' + str(rot) + ',' + lname + '\n')
+    top_fh.close()
+    bottom_fh.close()
 
-    topfh.close()
-    botfh.close()
 
-#create()
+    # Write the BOM.
+    bom_file = os.path.join(project_path, projet_name) + '_JLCPCB_BoM.csv'
+    bom_fh = open(bom_file, 'w')
+    bom_fh.write('Comment,Designator,Footprint,LCSC\n')
+
+    for k, v in bom_list.items():
+        value, footprint, lcsc = re.split("//", k)
+        references = ','.join(v)
+        bom_fh.write('"' + value + '","' + references + '","' +
+                    footprint + '","' + lcsc + '"\n')
+
+    bom_fh.close()
