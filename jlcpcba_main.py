@@ -77,14 +77,22 @@ def create_pcba():
 
         # Add item to the BOM creating a `set()`.
         reference = f.GetReference()
-        value = f.GetValue()
+        value = f.GetValue().strip()
         # Check the typed name for the LCSC stock code filed name.
         lcsc_field_name = 'lcsc'
         for field_name in f.GetProperties().keys():
             if field_name.lower() == 'lcsc' or field_name.lower() == 'lcsc#':
                 lcsc_field_name = field_name
                 break
-        lcsc_code = f.GetProperty(lcsc_field_name)
+        lcsc_code = f.GetProperty(lcsc_field_name).strip()
+        # Add compatibility logic with KiCost (https://github.com/xesscorp/KiCost)
+        # by using the first valid LCSC stock code in case of multiple part assigned.
+        lcsc_codes = lcsc_code.split(';')
+        for c in lcsc_codes:
+            c = c.strip()
+            if c:
+                lcsc_code = c
+                break
 
         if not(re.search('\d$', reference) and re.search('\d', value)) and lcsc_field_name:
             # The reference must have a numeric ending, usually Pcbnew
@@ -112,7 +120,7 @@ def create_pcba():
 
         # Get the position of the component. Internally, Pcbnew uses
         # micrometer position unit and a tenth of degrees on rotation.
-        x = - f.GetX() / 1000000.0
+        x = f.GetX() / 1000000.0
         y = - f.GetY() / 1000000.0
         rotation = f.GetOrientationDegrees()  # Alredy give the converted value.
         rotation = (rotation + possible_rotate(footprint)) % 360
