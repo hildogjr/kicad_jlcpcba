@@ -1,6 +1,5 @@
-import os
+# Puglin subscriber for `jlcpcba_main.py` file.
 import re
-import sys
 
 import pcbnew
 import wx
